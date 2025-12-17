@@ -163,8 +163,12 @@
                         <p><strong>Opponent's Celebrity:</strong> <span>{{ gameState.opponentCelebrity }}</span></p>
                     </div>
                     <div class="button-group">
-                        <button @click="playAgain" class="btn btn-primary">Play Again</button>
+                        <button @click="requestRematch" class="btn btn-primary">Rematch</button>
+                        <button @click="playAgain" class="btn btn-secondary">New Game</button>
                         <button @click="backToMenu" class="btn btn-secondary">Main Menu</button>
+                    </div>
+                    <div v-if="rematchStatus" class="rematch-status">
+                        {{ rematchStatus }}
                     </div>
                 </div>
             </div>

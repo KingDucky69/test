@@ -79,6 +79,10 @@ wss.on('connection', (ws) => {
                     handleGuess(ws, message);
                     break;
                     
+                case 'rematch':
+                    handleRematch(ws, message);
+                    break;
+                    
                 case 'disconnect':
                     handleDisconnect(ws);
                     break;
@@ -237,6 +241,68 @@ wss.on('connection', (ws) => {
             });
             
             console.log(`Game ${connection.gameCode} finished. Winner: ${connection.role}`);
+        }
+    }
+
+    function handleRematch(ws, message) {
+        const game = activeGames.get(message.gameCode);
+        if (!game) return;
+        
+        const connection = playerConnections.get(ws);
+        if (!connection) return;
+        
+        const isPlayer1 = connection.role === 'player1';
+        
+        // Mark that this player wants a rematch
+        if (isPlayer1) {
+            game.player1RematchRequested = true;
+        } else {
+            game.player2RematchRequested = true;
+        }
+        
+        // Notify opponent about rematch request
+        const opponentWs = isPlayer1 ? game.player2Ws : game.player1Ws;
+        const opponentName = isPlayer1 ? game.player2 : game.player1;
+        
+        if (opponentWs && opponentWs.readyState === WebSocket.OPEN) {
+            opponentWs.send(JSON.stringify({
+                type: 'rematchRequest',
+                requesterName: message.playerName
+            }));
+        }
+        
+        // If both players want rematch, start new game
+        if (game.player1RematchRequested && game.player2RematchRequested) {
+            const newCeleb1 = getRandomCelebrity();
+            const newCeleb2 = getRandomCelebrity();
+            
+            game.player1Celebrity = newCeleb1;
+            game.player2Celebrity = newCeleb2;
+            game.player1Guesses = [];
+            game.player2Guesses = [];
+            game.status = 'active';
+            game.winner = null;
+            game.player1RematchRequested = false;
+            game.player2RematchRequested = false;
+            
+            // Notify both players
+            if (game.player1Ws && game.player1Ws.readyState === WebSocket.OPEN) {
+                game.player1Ws.send(JSON.stringify({
+                    type: 'rematchAccepted',
+                    yourCelebrity: newCeleb1,
+                    opponentCelebrity: newCeleb2
+                }));
+            }
+            
+            if (game.player2Ws && game.player2Ws.readyState === WebSocket.OPEN) {
+                game.player2Ws.send(JSON.stringify({
+                    type: 'rematchAccepted',
+                    yourCelebrity: newCeleb2,
+                    opponentCelebrity: newCeleb1
+                }));
+            }
+            
+            console.log(`Rematch started for game: ${message.gameCode}`);
         }
     }
 

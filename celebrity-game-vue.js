@@ -49,7 +49,9 @@ createApp({
             ws: null,
             wsConnected: false,
             reconnectAttempts: 0,
-            maxReconnectAttempts: 5
+            maxReconnectAttempts: 5,
+            rematchRequested: false,
+            rematchStatus: ''
         };
     },
     mounted() {
@@ -97,7 +99,7 @@ createApp({
             // IMPORTANT: Change 'your-server' to your actual Render app name
             const wsUrl = window.location.hostname === 'localhost' 
                 ? 'ws://localhost:3000' 
-                : 'wss://your-server.onrender.com'; // ← CHANGE THIS!
+                : 'wss://celebrity-game-l4nl.onrender.com'; // ← Must be wss:// for secure connection!
             
             try {
                 this.ws = new WebSocket(wsUrl);
@@ -184,6 +186,24 @@ createApp({
                     }
                     break;
                     
+                case 'rematchRequest':
+                    this.rematchStatus = `${data.requesterName} wants a rematch!`;
+                    this.showMessage('Your opponent wants a rematch!', 'success');
+                    break;
+                    
+                case 'rematchAccepted':
+                    this.showMessage('Rematch starting!', 'success');
+                    this.gameState.yourCelebrity = data.yourCelebrity;
+                    this.gameState.opponentCelebrity = data.opponentCelebrity;
+                    this.gameState.yourGuesses = [];
+                    this.gameState.opponentGuesses = [];
+                    this.gameState.gameOver = false;
+                    this.gameState.winner = null;
+                    this.rematchRequested = false;
+                    this.rematchStatus = '';
+                    setTimeout(() => this.startGame(), 1000);
+                    break;
+                    
                 case 'error':
                     this.showMessage(data.message, 'error');
                     if (data.message.includes('not found') || data.message.includes('full')) {
@@ -198,6 +218,12 @@ createApp({
             this.currentScreen = screen;
             this.playerName = '';
             this.gameCode = '';
+        },
+        showCreateScreen() {
+            this.currentScreen = 'create';
+        },
+        showJoinScreen() {
+            this.currentScreen = 'join';
         },
         backToMenu() {
             this.currentScreen = 'menu';
@@ -337,11 +363,30 @@ createApp({
             this.currentGuess = '';
         },
         endGame(youWon) {
-            this.currentScreen = 'game-over';
+            this.currentScreen = 'gameOver';
+            this.rematchRequested = false;
+            this.rematchStatus = '';
+        },
+        requestRematch() {
+            if (this.rematchRequested) {
+                this.showMessage('Rematch already requested!', 'error');
+                return;
+            }
+            
+            this.rematchRequested = true;
+            this.rematchStatus = 'Waiting for opponent to accept...';
+            
+            this.sendToServer({
+                type: 'rematch',
+                gameCode: this.gameState.gameCode,
+                playerName: this.gameState.playerName
+            });
         },
         playAgain() {
             this.playerName = this.gameState.playerName;
             this.currentScreen = 'menu';
+            this.rematchRequested = false;
+            this.rematchStatus = '';
         }
     }
 }).mount('#app');
