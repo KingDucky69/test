@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celebrity Guessing Game - Vue.js</title>
+    <link rel="stylesheet" href="celebrity-game.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <header>
+                <h1>🎭 Celebrity Guessing Game 🎭</h1>
+                <p class="subtitle">2-Player Multiplayer Challenge</p>
+            </header>
+
+            <!-- Main Menu -->
+            <div v-if="currentScreen === 'menu'" class="screen active">
+                <div class="menu-content">
+                    <h2>Welcome!</h2>
+                    <p>Guess your opponent's celebrity before they guess yours!</p>
+                    <div class="button-group">
+                        <button @click="showCreateScreen" class="btn btn-primary">Create Game</button>
+                        <button @click="showJoinScreen" class="btn btn-secondary">Join Game</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Game Screen -->
+            <div v-if="currentScreen === 'create'" class="screen active">
+                <div class="menu-content">
+                    <h2>Create New Game</h2>
+                    <div class="form-group">
+                        <label for="player-name-create">Your Name:</label>
+                        <input 
+                            type="text" 
+                            id="player-name-create" 
+                            v-model="playerName"
+                            @keyup.enter="createGame"
+                            placeholder="Enter your name" 
+                            maxlength="20">
+                    </div>
+                    <div class="button-group">
+                        <button @click="createGame" class="btn btn-primary">Create Room</button>
+                        <button @click="backToMenu" class="btn btn-secondary">Back</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join Game Screen -->
+            <div v-if="currentScreen === 'join'" class="screen active">
+                <div class="menu-content">
+                    <h2>Join Game</h2>
+                    <div class="form-group">
+                        <label for="player-name-join">Your Name:</label>
+                        <input 
+                            type="text" 
+                            v-model="playerName"
+                            placeholder="Enter your name" 
+                            maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="game-code">Game Code:</label>
+                        <input 
+                            type="text" 
+                            v-model="gameCode"
+                            @keyup.enter="joinGame"
+                            placeholder="Enter 6-digit code" 
+                            maxlength="6">
+                    </div>
+                    <div class="button-group">
+                        <button @click="joinGame" class="btn btn-primary">Join Room</button>
+                        <button @click="backToMenu" class="btn btn-secondary">Back</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waiting Room -->
+            <div v-if="currentScreen === 'waiting'" class="screen active">
+                <div class="menu-content">
+                    <h2>Waiting for Opponent...</h2>
+                    <div class="game-code-display">
+                        <p>Share this code with your friend:</p>
+                        <div class="code-box">
+                            <span>{{ gameState.gameCode }}</span>
+                            <button @click="copyCode" class="btn-icon" title="Copy code">📋</button>
+                        </div>
+                    </div>
+                    <p class="player-info">Player: <span>{{ gameState.playerName }}</span></p>
+                    <div class="loading-spinner"></div>
+                    <button @click="cancelGame" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Game Screen -->
+            <div v-if="currentScreen === 'game'" class="screen active">
+                <div class="game-header">
+                    <div class="player-info-bar">
+                        <div class="player-box">
+                            <strong>You:</strong> <span>{{ gameState.playerName }}</span>
+                            <div class="status">{{ yourStatus }}</div>
+                        </div>
+                        <div class="vs">VS</div>
+                        <div class="player-box">
+                            <strong>Opponent:</strong> <span>{{ gameState.opponentName }}</span>
+                            <div class="status">{{ opponentStatus }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-content">
+                    <div class="celebrity-section">
+                        <h3>Your Celebrity:</h3>
+                        <div class="celebrity-card">
+                            <div class="celebrity-name">{{ gameState.yourCelebrity }}</div>
+                        </div>
+                        <p class="hint">Don't let your opponent see this!</p>
+                    </div>
+
+                    <div class="guess-section">
+                        <h3>Guess Opponent's Celebrity:</h3>
+                        <div class="guess-input-group">
+                            <input 
+                                type="text" 
+                                v-model="currentGuess"
+                                @keyup.enter="submitGuess"
+                                placeholder="Type celebrity name..." 
+                                maxlength="50">
+                            <button @click="submitGuess" class="btn btn-primary">Guess</button>
+                        </div>
+                        <div class="feedback" :class="feedbackClass">{{ feedbackMessage }}</div>
+                    </div>
+
+                    <div class="guesses-section">
+                        <div class="guess-column">
+                            <h4>Your Guesses:</h4>
+                            <div class="guesses-list">
+                                <div v-for="guess in gameState.yourGuesses" :key="guess" class="guess-item">
+                                    {{ guess }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="guess-column">
+                            <h4>Opponent's Guesses:</h4>
+                            <div class="guesses-list">
+                                <div v-for="guess in gameState.opponentGuesses" :key="guess" class="guess-item opponent">
+                                    {{ guess }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div v-if="currentScreen === 'gameOver'" class="screen active">
+                <div class="menu-content">
+                    <h2>{{ gameOverTitle }}</h2>
+                    <div class="game-over-message">{{ gameOverMessage }}</div>
+                    <div class="reveal-section">
+                        <p><strong>Your Celebrity:</strong> <span>{{ gameState.yourCelebrity }}</span></p>
+                        <p><strong>Opponent's Celebrity:</strong> <span>{{ gameState.opponentCelebrity }}</span></p>
+                    </div>
+                    <div class="button-group">
+                        <button @click="playAgain" class="btn btn-primary">Play Again</button>
+                        <button @click="backToMenu" class="btn btn-secondary">Main Menu</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Toast -->
+            <div class="message" :class="{ show: message.show, success: message.type === 'success', error: message.type === 'error' }">
+                {{ message.text }}
+            </div>
+        </div>
+    </div>
+
+    <script src="celebrity-game-vue.js"></script>
+</body>
+</html>
