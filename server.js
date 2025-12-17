@@ -97,6 +97,8 @@ wss.on('connection', (ws) => {
         const gameCode = generateGameCode();
         const celebrity1 = getRandomCelebrity();
         
+        console.log(`Creating game with code: ${gameCode} for player: ${message.playerName}`);
+        
         const game = {
             gameCode,
             player1: message.playerName,
@@ -112,6 +114,8 @@ wss.on('connection', (ws) => {
         };
         
         activeGames.set(gameCode, game);
+        console.log(`Game stored. Active games now:`, Array.from(activeGames.keys()));
+        
         playerConnections.set(ws, { gameCode, role: 'player1' });
         currentGameCode = gameCode;
         playerRole = 'player1';
