@@ -127,9 +127,13 @@ wss.on('connection', (ws) => {
     }
 
     function handleJoinGame(ws, message) {
+        console.log(`Attempting to join game: "${message.gameCode}" (type: ${typeof message.gameCode})`);
+        console.log(`Active games:`, Array.from(activeGames.keys()));
+        
         const game = activeGames.get(message.gameCode);
         
         if (!game) {
+            console.log(`Game ${message.gameCode} not found!`);
             ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Game not found! Check the code and try again.'
