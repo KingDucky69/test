@@ -189,6 +189,11 @@ createApp({
                 case 'rematchRequest':
                     this.rematchStatus = `${data.requesterName} wants a rematch!`;
                     this.showMessage('Your opponent wants a rematch!', 'success');
+                    
+                    // Auto-accept if this player already requested rematch
+                    if (this.rematchRequested) {
+                        this.rematchStatus = 'Both players ready! Starting rematch...';
+                    }
                     break;
                     
                 case 'rematchAccepted':
