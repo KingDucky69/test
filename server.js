@@ -64,21 +64,22 @@ wss.on('connection', (ws) => {
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
+            console.log('Received message:', message);
             
             switch (message.type) {
-                case 'CREATE_GAME':
+                case 'createGame':
                     handleCreateGame(ws, message);
                     break;
                     
-                case 'JOIN_GAME':
+                case 'joinGame':
                     handleJoinGame(ws, message);
                     break;
                     
-                case 'SUBMIT_GUESS':
+                case 'guess':
                     handleGuess(ws, message);
                     break;
                     
-                case 'DISCONNECT':
+                case 'disconnect':
                     handleDisconnect(ws);
                     break;
             }
@@ -116,7 +117,7 @@ wss.on('connection', (ws) => {
         playerRole = 'player1';
         
         ws.send(JSON.stringify({
-            type: 'GAME_CREATED',
+            type: 'gameCreated',
             gameCode,
             celebrity: celebrity1,
             playerName: message.playerName
@@ -130,16 +131,16 @@ wss.on('connection', (ws) => {
         
         if (!game) {
             ws.send(JSON.stringify({
-                type: 'ERROR',
-                message: 'Game not found'
+                type: 'error',
+                message: 'Game not found! Check the code and try again.'
             }));
             return;
         }
         
         if (game.status !== 'waiting') {
             ws.send(JSON.stringify({
-                type: 'ERROR',
-                message: 'Game is full'
+                type: 'error',
+                message: 'This game is already full!'
             }));
             return;
         }
@@ -157,18 +158,19 @@ wss.on('connection', (ws) => {
         
         // Send to player 2
         ws.send(JSON.stringify({
-            type: 'GAME_JOINED',
+            type: 'gameJoined',
             gameCode: message.gameCode,
-            celebrity: celebrity2,
-            playerName: message.playerName,
-            opponentName: game.player1
+            yourCelebrity: celebrity2,
+            opponentName: game.player1,
+            opponentCelebrity: game.player1Celebrity
         }));
         
         // Notify player 1
         if (game.player1Ws && game.player1Ws.readyState === WebSocket.OPEN) {
             game.player1Ws.send(JSON.stringify({
-                type: 'OPPONENT_JOINED',
-                opponentName: message.playerName
+                type: 'opponentJoined',
+                opponentName: message.playerName,
+                opponentCelebrity: celebrity2
             }));
         }
         
@@ -207,7 +209,7 @@ wss.on('connection', (ws) => {
         const opponentWs = isPlayer1 ? game.player2Ws : game.player1Ws;
         if (opponentWs && opponentWs.readyState === WebSocket.OPEN) {
             opponentWs.send(JSON.stringify({
-                type: 'OPPONENT_GUESSED',
+                type: 'opponentGuess',
                 guess
             }));
         }
